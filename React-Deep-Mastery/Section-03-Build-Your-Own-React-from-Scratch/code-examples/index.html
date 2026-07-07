@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Build Your Own React Demo</title>
+  <!-- Load Babel in browser to transpile JSX on the fly -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body style="background: #1e1e2e; color: #cdd6f4; font-family: sans-serif; padding: 40px;">
+  <div id="root"></div>
+
+  <!-- Load our custom reconciler -->
+  <script src="./reconciler-effects.js"></script>
+
+  <!-- Write JSX script compiled by Babel -->
+  <script type="text/babel">
+    /** @jsx MyReact.createElement */
+
+    function App() {
+      const [count, setCount] = MyReact.useState(0);
+      const [seconds, setSeconds] = MyReact.useState(0);
+      const renderCountRef = MyReact.useRef(0);
+
+      renderCountRef.current += 1;
+
+      // 1. useEffect: Setup timer
+      MyReact.useEffect(() => {
+        const interval = setInterval(() => {
+          setSeconds(s => s + 1);
+        }, 1000);
+
+        return () => {
+          clearInterval(interval);
+        };
+      }, []);
+
+      // 2. useLayoutEffect: Simple DOM logging
+      MyReact.useLayoutEffect(() => {
+        console.log("useLayoutEffect executed synchronously. Render count:", renderCountRef.current);
+      }, [count]);
+
+      return (
+        <div style={{
+          background: '#313244',
+          borderRadius: '12px',
+          padding: '30px',
+          maxWidth: '500px',
+          margin: '0 auto',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+          border: '1px solid #45475a'
+        }}>
+          <h1 style={{ color: '#89b4fa', marginTop: 0 }}>Custom React Engine</h1>
+          <p style={{ color: '#a6adc8' }}>
+            Built from scratch utilizing a concurrent Fiber reconciler and a cooperative Scheduler work loop.
+          </p>
+          <hr style={{ border: '0.5px solid #45475a', margin: '20px 0' }} />
+          
+          <div style={{ margin: '15px 0' }}>
+            <h3 style={{ margin: '5px 0' }}>Interactive Counter:</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <button 
+                onclick={() => setCount(c => c + 1)}
+                style={{
+                  background: '#a6e3a1',
+                  color: '#11111b',
+                  border: 0,
+                  borderRadius: '6px',
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Increment
+              </button>
+              <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{count}</span>
+            </div>
+          </div>
+
+          <div style={{ margin: '20px 0' }}>
+            <h3 style={{ margin: '5px 0' }}>Timer (useEffect):</h3>
+            <span style={{ fontSize: '18px', color: '#f9e2af', fontWeight: 'bold' }}>{seconds} seconds elapsed</span>
+          </div>
+
+          <hr style={{ border: '0.5px solid #45475a', margin: '20px 0' }} />
+          <p style={{ fontSize: '14px', color: '#9399b2', margin: 0 }}>
+            Component Render Count: <strong style={{ color: '#f38ba8' }}>{renderCountRef.current}</strong>
+          </p>
+        </div>
+      );
+    }
+
+    MyReact.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>

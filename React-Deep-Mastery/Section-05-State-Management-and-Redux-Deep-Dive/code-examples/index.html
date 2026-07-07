@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Custom Redux & React Bindings Demo</title>
+  <!-- Load React & ReactDOM (Umd) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Load Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body style="background: #1e1e2e; color: #cdd6f4; font-family: sans-serif; padding: 40px;">
+  <div id="root"></div>
+
+  <!-- Load our custom Redux and bindings -->
+  <script src="./custom-redux.js"></script>
+
+  <script type="text/babel">
+    // 1. Reducer Definitions
+    const initialCounter = { value: 0 };
+    function counterReducer(state = initialCounter, action) {
+      switch (action.type) {
+        case 'INCREMENT':
+          return { value: state.value + 1 };
+        case 'DECREMENT':
+          return { value: state.value - 1 };
+        default:
+          return state;
+      }
+    }
+
+    const initialLogs = { list: [] };
+    function logsReducer(state = initialLogs, action) {
+      if (action.type === 'ADD_LOG') {
+        return { list: [action.payload, ...state.list].slice(0, 10) }; // Keep last 10 logs
+      }
+      return state;
+    }
+
+    // Combine Reducers
+    const rootReducer = CustomRedux.combineReducers({
+      counter: counterReducer,
+      logs: logsReducer
+    });
+
+    // 2. Custom Logger Middleware
+    const loggerMiddleware = store => next => action => {
+      // Intercept and create a transaction log
+      const result = next(action);
+      
+      // Prevent infinite loops: only log user actions, not log creation itself
+      if (action.type !== 'ADD_LOG') {
+        store.dispatch({
+          type: 'ADD_LOG',
+          payload: `Action: ${action.type} | New State: ${JSON.stringify(store.getState().counter)}`
+        });
+      }
+      return result;
+    };
+
+    // 3. Create Store
+    const store = CustomRedux.createStore(
+      rootReducer,
+      CustomRedux.applyMiddleware(loggerMiddleware)
+    );
+
+    // 4. Counter Component
+    function Counter() {
+      const count = CustomRedux.useSelector(state => state.counter.value);
+      const dispatch = CustomRedux.useDispatch();
+
+      return (
+        <div style={{ margin: '20px 0' }}>
+          <h2 style={{ color: '#89b4fa', margin: '5px 0' }}>Count: {count}</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              onClick={() => dispatch({ type: 'INCREMENT' })}
+              style={buttonStyle('#a6e3a1')}
+            >
+              Increment
+            </button>
+            <button 
+              onClick={() => dispatch({ type: 'DECREMENT' })}
+              style={buttonStyle('#f38ba8')}
+            >
+              Decrement
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 5. Logs Panel Component
+    function LogsPanel() {
+      const logs = CustomRedux.useSelector(state => state.logs.list);
+
+      return (
+        <div style={{
+          marginTop: '30px',
+          background: '#181825',
+          borderRadius: '8px',
+          padding: '20px',
+          border: '1px solid #313244'
+        }}>
+          <h3 style={{ color: '#f9e2af', marginTop: 0 }}>Middleware Transaction Logs (Last 10):</h3>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '14px' }}>
+            {logs.length === 0 ? (
+              <p style={{ color: '#585b70', margin: 0 }}>No transactions logged yet. Click the buttons above.</p>
+            ) : (
+              logs.map((log, index) => (
+                <div key={index} style={{ padding: '4px 0', borderBottom: '1px solid #1e1e2e', color: '#a6adc8' }}>
+                  ⚡ {log}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Main App Wrapper
+    function App() {
+      return (
+        <div style={{
+          background: '#313244',
+          borderRadius: '12px',
+          padding: '30px',
+          maxWidth: '600px',
+          margin: '0 auto',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+          border: '1px solid #45475a'
+        }}>
+          <h1 style={{ color: '#cba6f7', marginTop: 0, fontSize: '28px' }}>Custom Redux Engine</h1>
+          <p style={{ color: '#a6adc8' }}>
+            Centralized state management built from scratch, implementing applyMiddleware, combineReducers, Provider, and optimized useSelector hooks.
+          </p>
+          <hr style={{ border: '0.5px solid #45475a', margin: '20px 0' }} />
+          
+          <Counter />
+          <LogsPanel />
+        </div>
+      );
+    }
+
+    // Button Styling Helper
+    function buttonStyle(color) {
+      return {
+        background: color,
+        color: '#11111b',
+        border: 0,
+        borderRadius: '6px',
+        padding: '10px 20px',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        transition: 'transform 0.1s'
+      };
+    }
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <CustomRedux.Provider store={store}>
+        <App />
+      </CustomRedux.Provider>
+    );
+  </script>
+</body>
+</html>
